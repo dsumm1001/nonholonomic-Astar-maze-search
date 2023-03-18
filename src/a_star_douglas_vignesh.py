@@ -16,11 +16,12 @@ import cv2
 import math
 from queue import PriorityQueue
 import time
+import sys
 
 def getValidRobotRadius():
     while True:
         try:
-            robotRadius = input("Enter the radius of the robot as an integer from 1-12")
+            robotRadius = int(input("Enter the radius of the robot as an integer from 1-12: "))
         except ValueError:
             print("Sorry, results invalid. Please try again, entering the input as an integer between 1-12. ")
             continue
@@ -59,39 +60,52 @@ def drawMaze(robotRadius):
     # Create blank maze
     maze = np.zeros((mazeSize[0], mazeSize[1], 3), dtype = np.uint8)
     maze[:] = (0, 255, 0)
-    cv2.rectangle(maze, pt1=(5,5), pt2=(595,245), color=(255,255,255), thickness= -1)
+    cv2.rectangle(maze, pt1=(robotRadius,robotRadius), pt2=(mazeSize[1]-robotRadius,mazeSize[0]-robotRadius), color=(255,255,255), thickness= -1)
 
     # draw rectangle obstacles
-    cv2.rectangle(maze, pt1=(95,0), pt2=(155,105), color=(0,255,0), thickness= -1)
-    cv2.rectangle(maze, pt1=(95,145), pt2=(155,mazeSize[1]), color=(0,255,0), thickness= -1)
+    cv2.rectangle(maze, pt1=(100-robotRadius,0), pt2=(150 + robotRadius, 100 + robotRadius), color=(0,255,0), thickness= -1)
+    cv2.rectangle(maze, pt1=(100-robotRadius, 150-robotRadius), pt2=(150+robotRadius, mazeSize[1]), color=(0,255,0), thickness= -1)
 
     cv2.rectangle(maze, pt1=(100,0), pt2=(150,100), color=(0,0,255), thickness= -1)
     cv2.rectangle(maze, pt1=(100,150), pt2=(150,mazeSize[1]), color=(0,0,255), thickness= -1)
 
-    # draw hexagonal obstacle and boundary
-    hexBoundPts = np.array([[300, 44], [370, 84],
-                            [370, 166], [300, 206], 
-                            [230, 166], [230,84]])
+    # draw hexagonal boundary
+    hexRad = math.radians(30)
+    hexBoundPts = np.array([[300, 49 - robotRadius], 
+                            [365 + robotRadius, math.floor(125-37.5) - math.floor(robotRadius*math.sin(hexRad))],
+                            [365 + robotRadius, math.ceil(125+37.5) + math.ceil(robotRadius*math.sin(hexRad))], 
+                            [300, 201 + robotRadius], 
+                            [235 - robotRadius, math.ceil(125+37.5) + math.ceil(robotRadius*math.sin(hexRad))], 
+                            [235 - robotRadius, math.floor(125-37.5) - math.floor(robotRadius*math.sin(hexRad))]])
     cv2.fillConvexPoly(maze, hexBoundPts, color=(0, 255, 0))
 
-    hexPts = np.array([[300, 125-75], [365, math.ceil(125-37.5)],
-                            [365, math.ceil(125+37.5)], [300, 125+75], 
-                            [235, math.ceil(125+37.5)], [235, math.ceil(125-37.5)]])
+    # draw hexagonal obstacle
+    hexPts = np.array([[300, 50], [365, math.ceil(125-37.5)],
+                            [365, math.floor(125+37.5)], [300, 125+75], 
+                            [235, math.floor(125+37.5)], [235, math.ceil(125-37.5)]])
     cv2.fillConvexPoly(maze, hexPts, color=(0, 0, 255))
 
-    # draw triangular obstacle
-    cv2.circle(maze, (460, 25), 5, color=(0, 255, 0), thickness=-1)
-    cv2.circle(maze, (460, 225), 5, color=(0, 255, 0), thickness=-1)
-    cv2.circle(maze, (510, 125), 5, color=(0, 255, 0), thickness=-1)
+    # draw triangular boundary
+    cv2.circle(maze, (460, 25), robotRadius, color=(0, 255, 0), thickness=-1)
+    cv2.circle(maze, (460, 225), robotRadius, color=(0, 255, 0), thickness=-1)
+    cv2.circle(maze, (510, 125), robotRadius, color=(0, 255, 0), thickness=-1)
 
-    cv2.rectangle(maze, pt1=(455,25), pt2=(460,225), color=(0,255,0), thickness= -1)
+    cv2.rectangle(maze, pt1=(460 - robotRadius,25), pt2=(460,225), color=(0,255,0), thickness= -1)
 
-    triUpperBoundPts = np.array([[460, 25], [465, 22], [516, 125], [510, 125]])
+    triRad = math.radians(26.565)
+    triUpperBoundPts = np.array([[460, 25], 
+                                 [460 + int(robotRadius*math.cos(triRad)), 25 - int(robotRadius*math.sin(triRad))], 
+                                 [510 + int(robotRadius*math.cos(triRad)), 125 - int(robotRadius*math.sin(triRad))], 
+                                 [510, 125]])
     cv2.fillConvexPoly(maze, triUpperBoundPts, color=(0, 255, 0))
 
-    triLowerBoundPts = np.array([[510, 125], [516, 125], [465, 228], [460, 225]])
+    triLowerBoundPts = np.array([[510, 125], 
+                                 [510 + int(robotRadius*math.cos(triRad)), 125 + int(robotRadius*math.sin(triRad))], 
+                                 [460 + int(robotRadius*math.cos(triRad)), 225 + int(robotRadius*math.sin(triRad))], 
+                                 [460, 225]])
     cv2.fillConvexPoly(maze, triLowerBoundPts, color=(0, 255, 0))
 
+    # draw triangular obstacle
     triPts = np.array([[460, 25], [460, 225], [510, 125]])
     cv2.fillConvexPoly(maze, triPts, color=(0, 0, 255))
     return maze
@@ -203,7 +217,7 @@ def generatePath(nodeIndex, nodeCoords, maze):
 
     return pathIndices, pathCoords
 
-def simulateBot(pathCoords, searchedNodeCoords, emptyMaze):
+def simulateBot(pathCoords, searchedNodeCoords, emptyMaze, robotRadius):
     index = 90
     while index >=0:
         index -= 1
@@ -224,7 +238,7 @@ def simulateBot(pathCoords, searchedNodeCoords, emptyMaze):
     
     for i in pathCoords:
        emptyMazeCopy = emptyMaze.copy()
-       currCirc = cv2.circle(emptyMazeCopy, (int(i[0]),int(i[1])), 5, color=(255,0,255), thickness=-1)
+       currCirc = cv2.circle(emptyMazeCopy, (int(i[0]),int(i[1])), robotRadius, color=(255,0,255), thickness=-1)
        outVid.write(cv2.flip(currCirc,0))
 
     index = 60
@@ -238,14 +252,21 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 outVid = cv2.VideoWriter('output.mp4', fourcc, 60, (600,250))
 #outVid = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc(*'MJPG'), 60, (600,250))
 
-maze = drawMaze()
+robotRadius = getValidRobotRadius()
+
+maze = drawMaze(robotRadius)
+# # show drawn maze
+# cv2.imshow("Current Maze", maze)
+# cv2.waitKey(0)
 blankMaze = maze.copy()
 
 # get start and goal nodes
-start = getValidInput("start", maze)
-goal = getValidInput("goal", maze)
+start = getValidCoords("start", maze, robotRadius)
+goal = getValidCoords("goal", maze, robotRadius)
 print()
 print("Pathfinding... \n")
+
+#sys.exit("Halt! \n")
 
 startTime = time.time()
 
@@ -289,7 +310,7 @@ while not openList.empty() and solved == False:
         cv2.waitKey(0)
 
         print("Generating simulation...")
-        simulateBot(pathCoords, closedList, blankMaze)
+        simulateBot(pathCoords, closedList, blankMaze, robotRadius)
         print("Simulation complete! \n")
         break
 
