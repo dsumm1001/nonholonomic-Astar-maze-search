@@ -322,8 +322,8 @@ while not openList.empty() and solved == False:
             if not i[2] in openSet:
                 index += 1
                 i[1] = index
-                i[0] = first[0] + i[4]
-                i[3] = i[0] + euclideanCostToGo(i[2], goal)
+                i[3] = first[3] + i[4]
+                i[0] = i[3] + euclideanCostToGo(i[2], goal)
 
                 parentDict[i[1]] = first[1]
                 coordDict[i[1]] = i[2]
@@ -331,10 +331,10 @@ while not openList.empty() and solved == False:
                 openList.put(i)
                 openSet.add(i[2])
         else:
-            if i[3] > first[0] + i[4]:
+            if i[0] > first[3] + i[4]:
                 parentDict[i[1]] = first[1]
-                i[0] = first[0] + i[4]
-                i[3] = i[0] + euclideanCostToGo(i[2], goal)
+                i[3] = first[3] + i[4]
+                i[0] = i[3] + euclideanCostToGo(i[2], goal)
 
 if solved == False:
     print ("Failure! Goal node not found")
