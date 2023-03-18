@@ -17,8 +17,21 @@ import math
 from queue import PriorityQueue
 import time
 
-def getValidInput(type, maze):
-    thresh = 5
+def getValidRobotRadius():
+    while True:
+        try:
+            robotRadius = input("Enter the radius of the robot as an integer from 1-12")
+        except ValueError:
+            print("Sorry, results invalid. Please try again, entering the input as an integer between 1-12. ")
+            continue
+        if robotRadius <= 0 or robotRadius >= 13:
+            print("Sorry, results invalid. Please try again, entering the input as an integer between 1-12. ")
+            continue
+        else:
+            break
+    return robotRadius
+
+def getValidCoords(type, maze, robotRadius):
     while True:
         try:
             coordInput = input("Enter " + type + " node coordinates in x, y format, separated by a comma: ")
@@ -26,7 +39,7 @@ def getValidInput(type, maze):
         except ValueError:
             print("Sorry, results invalid. Please try again, entering two integer inputs between 5-595 and 5-245, respectively. ")
             continue
-        if coords[0] < 0 + thresh or coords[0] > 600 - thresh or coords[1] < 0 + thresh or coords[1] > 250 - thresh:
+        if coords[0] < 0 + robotRadius or coords[0] > 600 - robotRadius or coords[1] < 0 + robotRadius or coords[1] > 250 - robotRadius:
             print("Sorry, results invalid. Please try again, entering two integer inputs between 5-595 and 5-245, respectively. ")
             continue
         if checkObstacle(coords, maze) == True:
@@ -36,7 +49,11 @@ def getValidInput(type, maze):
             break
     return coords
 
-def drawMaze():
+def euclideanCostToGo(curr, goal):
+    eucCost = math.sqrt(math.pow(goal[0] - curr[0], 2) + math.pow(goal[1] - curr[1], 2))
+    return eucCost #float
+
+def drawMaze(robotRadius):
     mazeSize = (250,600)
 
     # Create blank maze
@@ -63,9 +80,9 @@ def drawMaze():
     cv2.fillConvexPoly(maze, hexPts, color=(0, 0, 255))
 
     # draw triangular obstacle
-    cv2.circle(maze, [460, 25], 5, color=(0, 255, 0), thickness=-1)
-    cv2.circle(maze, [460, 225], 5, color=(0, 255, 0), thickness=-1)
-    cv2.circle(maze, [510, 125], 5, color=(0, 255, 0), thickness=-1)
+    cv2.circle(maze, (460, 25), 5, color=(0, 255, 0), thickness=-1)
+    cv2.circle(maze, (460, 225), 5, color=(0, 255, 0), thickness=-1)
+    cv2.circle(maze, (510, 125), 5, color=(0, 255, 0), thickness=-1)
 
     cv2.rectangle(maze, pt1=(455,25), pt2=(460,225), color=(0,255,0), thickness= -1)
 
@@ -285,7 +302,7 @@ while not openList.empty() and solved == False:
                 index += 1
                 i[1] = index
                 i[0] = first[0] + i[4]
-                i[3] = i[0]
+                i[3] = i[0] + euclideanCostToGo(i[2], goal)
 
                 parentDict[i[1]] = first[1]
                 coordDict[i[1]] = i[2]
@@ -296,7 +313,7 @@ while not openList.empty() and solved == False:
             if i[3] > first[0] + i[4]:
                 parentDict[i[1]] = first[1]
                 i[0] = first[0] + i[4]
-                i[3] = i[0]
+                i[3] = i[0] + euclideanCostToGo(i[2], goal)
 
 if solved == False:
     print ("Failure! Goal node not found")
