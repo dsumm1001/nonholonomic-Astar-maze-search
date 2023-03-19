@@ -137,9 +137,12 @@ def drawMaze(robotRadius):
     return maze
 
 def checkObstacle(xyCoords, maze):
-    if all(maze[(int(2*xyCoords[1]), int(2*xyCoords[0]))] == [255,255,255]):
-        return False
-    else:
+    try:
+        if all(maze[(int(2*xyCoords[1]), int(2*xyCoords[0]))] == [255,255,255]):
+            return False
+        else:
+            return True
+    except IndexError:
         return True
     
 def roundCoord(val):
@@ -249,61 +252,52 @@ def generatePath(nodeIndex, nodeCoords, maze):
 
     return pathIndices, pathCoords
 
-# def simulateBot(pathCoords, searchedNodeCoords, emptyMaze, robotRadius):
-    index = 90
-    while index >=0:
-        index -= 1
-        outVid.write(cv2.flip(emptyMaze,0))
-
-    for i in searchedNodeCoords:
-        emptyMaze[i[1], i[0]] = (255,0,0)
-        index += 1
-        if index >= 50:
-            outVid.write(cv2.flip(emptyMaze,0))
-            index = 0
+def simulateBot(pathCoords, emptyMaze, robotRadius):
+    # print(pathCoords)
 
     for i in pathCoords:
-        cv2.circle(emptyMaze, (int(i[0]),int(i[1])), 1, color=(0,255,255), thickness=-1)
+        tempX = int(2*i[0][0])
+        tempY = int(2*i[0][1])
+        cv2.circle(emptyMaze, (tempX, tempY), 5, color=(0,255,255), thickness=-1)
         outVid.write(cv2.flip(emptyMaze,0))
 
     pathCoords.reverse()
     
     for i in pathCoords:
-       emptyMazeCopy = emptyMaze.copy()
-       currCirc = cv2.circle(emptyMazeCopy, (int(i[0]),int(i[1])), robotRadius, color=(255,0,255), thickness=-1)
-       outVid.write(cv2.flip(currCirc,0))
+        emptyMazeCopy = emptyMaze.copy()
+        tempXR = int(2*i[0][0])
+        tempYR = int(2*i[0][1])
+        currCirc = cv2.circle(emptyMazeCopy, (tempXR,tempYR), 2*robotRadius, color=(255,0,255), thickness=-1)
+        outVid.write(cv2.flip(currCirc,0))
 
-    index = 60
+    index = 30
     while index >=0:
         index -= 1
         outVid.write(cv2.flip(currCirc,0))
 
 print("\nWelcome to the Dijkstra Maze Finder Program! \n")
 
-# fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-# outVid = cv2.VideoWriter('output.mp4', fourcc, 60, (600,250))
-#outVid = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc(*'MJPG'), 60, (600,250))
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+outVid = cv2.VideoWriter('output.mp4', fourcc, 30, (1200,500))
+#outVid = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc(*'MJPG'), 60, (1200,500))
 
 robotRadius = getValidRobotRadius()
 stepSize = getValidStepSize()
 
 maze = drawMaze(robotRadius)
-blankMaze = maze.copy()
-
-# # show drawn maze
-# cv2.imshow("Current Maze", maze)
-# cv2.waitKey(0)
 doubleMaze = cv2.resize(maze, (maze.shape[1]*2, maze.shape[0]*2), interpolation = cv2.INTER_LINEAR)
-# cv2.imshow("Double Maze", doubleMaze)
-# cv2.waitKey(0)
+blankMaze = doubleMaze.copy()
+
+counter = 30
+while counter >=0:
+    counter -= 1
+    outVid.write(cv2.flip(blankMaze,0))
 
 # get start and goal nodes
 start = getValidCoords("start", maze, robotRadius)
 goal = getValidCoords("goal", maze, robotRadius)
 print()
 print("Pathfinding... \n")
-
-#sys.exit("Halt! \n")
 
 startTime = time.time()
 solved = False
@@ -347,16 +341,17 @@ while not openList.empty() and solved == False:
         print("Current node index: ", first[1], " and cost: ", round(first[3],2), "\n")
         solved = True
 
-        pathIndices, pathCoords = generatePath(first[1], first[2], doubleMaze)
+        dispMaze = doubleMaze.copy()
+
+        pathIndices, pathCoords = generatePath(first[1], first[2], dispMaze)
         print("Displaying generated path... close window to continue \n")
         # # display the path image using opencv
-        dispMaze = doubleMaze.copy()
         dispMaze = cv2.flip(dispMaze, 0)
         cv2.imshow('Generated Path', dispMaze)
         cv2.waitKey(0)
 
         print("Generating simulation...")
-        simulateBot(pathCoords, closedList, blankMaze, robotRadius)
+        simulateBot(pathCoords, doubleMaze, robotRadius)
         print("Simulation complete! \n")
         break
 
@@ -364,10 +359,9 @@ while not openList.empty() and solved == False:
     # print(results)
  
     for i in results:
-        print("Searching Node: ", i)
+        #print("Searching Node: ", i)
         # print("Graphspace values", int(2*i[2][0][0]), int(2*i[2][0][1]), int(i[2][1]/30))
         # print("Checked or not? ", graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)])
-        #if not i[2] in closedSet:
         if graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)] == 0:
             if not i[2] in openSet:
                 index += 1
@@ -388,11 +382,15 @@ while not openList.empty() and solved == False:
                                  color = [255,0,0], 
                                  thickness = 1)
                 
+                counter += 1
+                if counter >= 50:
+                    outVid.write(cv2.flip(doubleMaze,0))
+                    counter = 0
+                
         else:
-            print("Gotcha, ", i, i[0])
+            #print("Gotcha, ", i)
             tempIndex = {j for j in coordDict if coordDict[j] == i[2]}
             tempIndex = tempIndex.pop()
-            print("Found Index: ", tempIndex)
             if costDict[tempIndex] > first[3] + stepSize:
                 parentDict[tempIndex] = first[1]
                 c2cDict[tempIndex] = first[3] + stepSize
@@ -406,27 +404,28 @@ while not openList.empty() and solved == False:
 if solved == False:
     print ("Failure! Goal node not found")
 
-# print("Saving video... ")
-# outVid.release()
-# print("Video saved successfully! Displaying video... \n")
+print("Saving video... ")
+outVid.release()
 
-# cap = cv2.VideoCapture('output.mp4')
+# play simulation video
+print("Video saved successfully! Displaying video... \n")
+cap = cv2.VideoCapture('output.mp4')
 
-# if cap.isOpened() == False:
-#     print("Error File Not Found")
+if cap.isOpened() == False:
+    print("Error File Not Found")
 
-# while cap.isOpened():
-#     ret,frame= cap.read()
-#     if ret == True:
-#         cv2.imshow('frame', frame)
-#         if cv2.waitKey(1) & 0xFF == ord('q'):
-#             break
-#     else:
-#         break
+while cap.isOpened():
+    ret,frame= cap.read()
+    if ret == True:
+        cv2.imshow('frame', frame)
+        if cv2.waitKey(25) & 0xFF == ord('q'):
+            break
+    else:
+        break
 
-# cap.release()
-# print("Video displayed successfully! Program termination  \n")
-# cv2.destroyAllWindows()
+cap.release()
+print("Video displayed successfully! Program termination  \n")
+cv2.destroyAllWindows()
 
 # Resources
 # https://www.programiz.com/dsa/priority-queue
@@ -437,3 +436,4 @@ if solved == False:
 # https://stackoverflow.com/questions/30103077/what-is-the-codec-for-mp4-videos-in-python-opencv
 # https://docs.opencv.org/3.4/dd/d43/tutorial_py_video_display.html
 # https://www.geeksforgeeks.org/python-play-a-video-using-opencv/
+# https://www.geeksforgeeks.org/python-opencv-cv2-arrowedline-method/
