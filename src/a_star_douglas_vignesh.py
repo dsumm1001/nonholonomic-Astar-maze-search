@@ -43,12 +43,38 @@ def getValidCoords(type, maze, robotRadius):
         if coords[0] < 0 + robotRadius or coords[0] > 600 - robotRadius or coords[1] < 0 + robotRadius or coords[1] > 250 - robotRadius:
             print("Sorry, results invalid. Please try again, entering two integer inputs between 5-595 and 5-245, respectively. ")
             continue
-        if checkObstacle(coords, maze) == True:
+        if all(maze[(int(coords[1]), int(coords[0]))] == [255,255,255]) == False:
             print("Sorry, results invalid. Please try again, making sure to not place the start or goal in an obstacle space.")
             continue
         else:
             break
-    return coords
+
+    while True:
+        try:
+            theta = int(input("Enter " + type + " node orientation as an integer between 0-360: "))
+            if theta % 30 !=0:
+                raise ValueError
+        except ValueError:
+            print(("Sorry, results invalid. Please try again, entering an integer input between 0-360 in increments of 30. "))
+        else:
+            break
+
+    nodeState = (coords, theta)
+    return nodeState
+
+def getValidStepSize():
+    while True:
+        try:
+            stepSize = int(input("Enter the step size of the robot as an integer from 1-10: "))
+        except ValueError:
+            print("Sorry, results invalid. Please try again, entering the input as an integer between 1-10. ")
+            continue
+        if robotRadius <= 0 or robotRadius >= 11:
+            print("Sorry, results invalid. Please try again, entering the input as an integer between 1-10. ")
+            continue
+        else:
+            break
+    return stepSize
 
 def euclideanCostToGo(curr, goal):
     eucCost = math.sqrt(math.pow(goal[0] - curr[0], 2) + math.pow(goal[1] - curr[1], 2))
@@ -111,96 +137,100 @@ def drawMaze(robotRadius):
     return maze
 
 def checkObstacle(xyCoords, maze):
-    if all(maze[xyCoords[1], xyCoords[0]] == [255,255,255]):
+    if all(maze[(int(2*xyCoords[1]), int(2*xyCoords[0]))] == [255,255,255]):
         return False
     else:
         return True
+    
+def roundCoord(val):
+    if (val - math.floor(val)) < 0.25:
+        val = math.floor(val)
+    elif 0.25 <= (val - math.floor(val)) < 0.75:
+        val = math.floor(val) + 0.5
+    elif (val - math.floor(val)) >= 0.75:
+        val = math.ceil(val)
+    return val
 
-# [c2c, index, coords, cost, actioncost]    
-def actMoveRight(curr, maze):
-    if (checkObstacle((curr[0]+1,curr[1]), maze) == False):
-        newRight = [None, None, (curr[0]+1, curr[1]), None, 1]
-        return newRight
+def checkAngle(ang):
+    temp = ang % 360
+    ang = temp
+    return ang
+
+# [cost, index, coords, c2c]  
+def actZero(node, maze):
+    xZero = roundCoord(node[0][0] + stepSize*math.cos(math.radians(node[1])))
+    yZero = roundCoord(node[0][1] + stepSize*math.sin(math.radians(node[1])))
+    angZero = checkAngle(node[1])
+
+    if (checkObstacle((xZero,yZero), maze) == False):
+        newThetaZero = [None, None, ((xZero, yZero), angZero), None]
+        return newThetaZero
+    else:
+        return None
+
+def actPlus30(node, maze):
+    xP30 = roundCoord(node[0][0] + stepSize*math.cos(math.radians(node[1] + 30)))
+    yP30 = roundCoord(node[0][1] + stepSize*math.sin(math.radians(node[1] + 30)))
+    angP30 = checkAngle(node[1] + 30)
+
+    if (checkObstacle((xP30,yP30), maze) == False):
+        newThetaPlus30 = [None, None, ((xP30, yP30), angP30), None]
+        return newThetaPlus30
     else:
         return None
     
-def actMoveLeft(curr, maze):
-    if (checkObstacle((curr[0]-1,curr[1]), maze) == False):
-        newLeft = [None, None, (curr[0]-1, curr[1]), None, 1]
-        return newLeft
+def actMinus30(node, maze):
+    xM30 = roundCoord(node[0][0] + stepSize*math.cos(math.radians(node[1] - 30)))
+    yM30 = roundCoord(node[0][1] + stepSize*math.sin(math.radians(node[1] - 30)))
+    angM30 = checkAngle(node[1] - 30)
+
+    if (checkObstacle((xM30,yM30), maze) == False):
+        newThetaMinus30 = [None, None, ((xM30, yM30), angM30), None]
+        return newThetaMinus30
     else:
         return None
     
-def actMoveUp(curr, maze):
-    if (checkObstacle((curr[0],curr[1]+1), maze) == False):
-        newUp = [None, None, (curr[0], curr[1]+1), None, 1]
-        return newUp
+def actPlus60(node, maze):
+    xP60 = roundCoord(node[0][0] + stepSize*math.cos(math.radians(node[1] + 60)))
+    yP60 = roundCoord(node[0][1] + stepSize*math.sin(math.radians(node[1] + 60)))
+    angP60 = checkAngle(node[1] + 60)
+
+    if (checkObstacle((xP60,yP60), maze) == False):
+        newThetaPlus60 = [None, None, ((xP60, yP60), angP60), None]
+        return newThetaPlus60
     else:
         return None
-    
-def actMoveDown(curr, maze):
-    if (checkObstacle((curr[0],curr[1]-1), maze) == False):
-        newDown = [None, None, (curr[0], curr[1]-1), None, 1]
-        return newDown
-    else:
-        return None
-    
-def actMoveUpRight(curr, maze):
-    if (checkObstacle((curr[0]+1,curr[1]+1), maze) == False):
-        newUpRight = [None, None, (curr[0]+1, curr[1]+1), None, 1.4]
-        return newUpRight
-    else:
-        return None
-    
-def actMoveUpLeft(curr, maze):
-    if (checkObstacle((curr[0]-1,curr[1]+1), maze) == False):
-        newUpLeft = [None, None, (curr[0]-1, curr[1]+1), None, 1.4]
-        return newUpLeft
-    else:
-        return None
-    
-def actMoveDownRight(curr, maze):
-    if (checkObstacle((curr[0]+1,curr[1]-1), maze) == False):
-        newDownRight = [None, None, (curr[0]+1, curr[1]-1), None, 1.4]
-        return newDownRight
-    else:
-        return None
-    
-def actMoveDownLeft(curr, maze):
-    if (checkObstacle((curr[0]-1,curr[1]-1), maze) == False):
-        newDownLeft = [None, None, (curr[0]-1, curr[1]-1), None, 1.4]
-        return newDownLeft
+
+def actMinus60(node, maze):
+    xM60 = roundCoord(node[0][0] + stepSize*math.cos(math.radians(node[1] - 60)))
+    yM60 = roundCoord(node[0][1] + stepSize*math.sin(math.radians(node[1] - 60)))
+    angM60 = checkAngle(node[1] - 60)
+
+    if (checkObstacle((xM60,yM60), maze) == False):
+        newThetaMinus60 = [None, None, ((xM60, yM60), angM60), None]
+        return newThetaMinus60
     else:
         return None
 
 def searchNode(nodeCoords, maze):
-    right = actMoveRight(nodeCoords, maze)
-    left = actMoveLeft(nodeCoords, maze)
-    up = actMoveUp(nodeCoords, maze)
-    down = actMoveDown(nodeCoords, maze)
-    upRight = actMoveUpRight(nodeCoords, maze)
-    upLeft = actMoveUpLeft(nodeCoords, maze)
-    downRight = actMoveDownRight(nodeCoords, maze)
-    downLeft = actMoveDownLeft(nodeCoords, maze)
+    zero = actZero(nodeCoords, maze)
+    plus30 = actPlus30(nodeCoords, maze)
+    minus30 = actMinus30(nodeCoords, maze)
+    plus60 = actPlus60(nodeCoords, maze)
+    minus60 = actMinus60(nodeCoords, maze)
 
     results = []
 
-    if right is not None:
-        results.append(right)
-    if left is not None:
-        results.append(left)
-    if up is not None:
-        results.append(up)
-    if down is not None:
-        results.append(down)
-    if upRight is not None:
-        results.append(upRight)
-    if upLeft is not None:
-        results.append(upLeft)
-    if downRight is not None:
-        results.append(downRight)
-    if downLeft is not None:
-        results.append(downLeft)
+    if zero is not None:
+        results.append(zero)
+    if plus30 is not None:
+        results.append(plus30)
+    if minus30 is not None:
+        results.append(minus30)
+    if plus60 is not None:
+        results.append(plus60)
+    if minus60 is not None:
+        results.append(minus60)
 
     return results
 
@@ -211,13 +241,15 @@ def generatePath(nodeIndex, nodeCoords, maze):
     while nodeIndex is not None:
         pathIndices.append(nodeIndex)
         pathCoords.append(nodeCoords)
-        cv2.circle(maze, (int(nodeCoords[0]),int(nodeCoords[1])), 1, color=(0,255,255), thickness=-1)
+        tempX = int(2*nodeCoords[0][0])
+        tempY = int(2*nodeCoords[0][1])
+        cv2.circle(maze, (tempX, tempY), 5, color=(0,255,255), thickness=-1)
         nodeCoords = coordDict[nodeIndex]
         nodeIndex = parentDict[nodeIndex]
 
     return pathIndices, pathCoords
 
-def simulateBot(pathCoords, searchedNodeCoords, emptyMaze, robotRadius):
+# def simulateBot(pathCoords, searchedNodeCoords, emptyMaze, robotRadius):
     index = 90
     while index >=0:
         index -= 1
@@ -248,17 +280,22 @@ def simulateBot(pathCoords, searchedNodeCoords, emptyMaze, robotRadius):
 
 print("\nWelcome to the Dijkstra Maze Finder Program! \n")
 
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-outVid = cv2.VideoWriter('output.mp4', fourcc, 60, (600,250))
+# fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+# outVid = cv2.VideoWriter('output.mp4', fourcc, 60, (600,250))
 #outVid = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc(*'MJPG'), 60, (600,250))
 
 robotRadius = getValidRobotRadius()
+stepSize = getValidStepSize()
 
 maze = drawMaze(robotRadius)
+blankMaze = maze.copy()
+
 # # show drawn maze
 # cv2.imshow("Current Maze", maze)
 # cv2.waitKey(0)
-blankMaze = maze.copy()
+doubleMaze = cv2.resize(maze, (maze.shape[1]*2, maze.shape[0]*2), interpolation = cv2.INTER_LINEAR)
+# cv2.imshow("Double Maze", doubleMaze)
+# cv2.waitKey(0)
 
 # get start and goal nodes
 start = getValidCoords("start", maze, robotRadius)
@@ -269,44 +306,53 @@ print("Pathfinding... \n")
 #sys.exit("Halt! \n")
 
 startTime = time.time()
-
 solved = False
+
 openList = PriorityQueue()
+openSet = set()
 
 # intialize data containers for backtracking
 parentDict = {1:None}
 coordDict = {1:start}
+costDict = {1:0}
+c2cDict = {1:0}
 closedSet = set()
 closedList = []
-openSet = set()
 
-# [c2c, index, coords, cost, actioncost]
-startNode = [0, 1, start, 0, 0]
+# initialize pathfinding matrix
+threshXY = 0.5
+threshTheta = 30
+graph = np.zeros((int(600/threshXY), int(250/threshXY), int(360/threshTheta)))
+
+# [cost, index, coords/theta, c2c]
+startNode = [0, 1, start, 0]
 index = startNode[1]
 
 openList.put(startNode)
 openSet.add(start)
-maze[startNode[2][1], startNode[2][0]] = (255,0,255)
 
 while not openList.empty() and solved == False:
     first = openList.get()
     openSet.remove(first[2])
-    closedSet.add(first[2])
+    closedSet.add(first[2]) 
     closedList.append(first[2])
 
-    if ((first[2] == goal)):
+    graph[int(2*first[2][0][0])][int(2*first[2][0][1])][int(first[2][1]/30)] = 1
+
+    print("Current Node: ", first)
+
+    if euclideanCostToGo(first[2][0], goal[0]) <= 1.5:
         elapsedTime = time.time() - startTime
         print ("Yay! Goal node located... Operation took ", elapsedTime, " seconds.")
         print("Current node index: ", first[1], " and cost: ", round(first[3],2), "\n")
         solved = True
 
-        pathIndices, pathCoords = generatePath(first[1], first[2], maze)
+        pathIndices, pathCoords = generatePath(first[1], first[2], doubleMaze)
         print("Displaying generated path... close window to continue \n")
         # # display the path image using opencv
-        dispMaze = maze.copy()
+        dispMaze = doubleMaze.copy()
         dispMaze = cv2.flip(dispMaze, 0)
-        dispMaze = cv2.resize(dispMaze, (1200,500), interpolation = cv2.INTER_AREA)
-        cv2.imshow('Maze', dispMaze)
+        cv2.imshow('Generated Path', dispMaze)
         cv2.waitKey(0)
 
         print("Generating simulation...")
@@ -314,52 +360,73 @@ while not openList.empty() and solved == False:
         print("Simulation complete! \n")
         break
 
-    results = searchNode(first[2], maze)
+    results = searchNode(first[2], doubleMaze)
+    # print(results)
  
     for i in results:
-        if not i[2] in closedSet:
-            maze[i[2][1], i[2][0]] = (255,0,0)
+        print("Searching Node: ", i)
+        # print("Graphspace values", int(2*i[2][0][0]), int(2*i[2][0][1]), int(i[2][1]/30))
+        # print("Checked or not? ", graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)])
+        #if not i[2] in closedSet:
+        if graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)] == 0:
             if not i[2] in openSet:
                 index += 1
                 i[1] = index
-                i[3] = first[3] + i[4]
-                i[0] = i[3] + euclideanCostToGo(i[2], goal)
+                i[3] = first[3] + stepSize
+                i[0] = i[3] + euclideanCostToGo(i[2][0], goal[0])
 
                 parentDict[i[1]] = first[1]
                 coordDict[i[1]] = i[2]
+                costDict[i[1]] = i[0]
+                c2cDict[i[1]] = i[3]
 
                 openList.put(i)
                 openSet.add(i[2])
+
+                cv2.arrowedLine(doubleMaze, (int(2*first[2][0][0]),int(2*first[2][0][1])),
+                                 (int(2*i[2][0][0]),int(2*i[2][0][1])), 
+                                 color = [255,0,0], 
+                                 thickness = 1)
+                
         else:
-            if i[0] > first[3] + i[4]:
-                parentDict[i[1]] = first[1]
-                i[3] = first[3] + i[4]
-                i[0] = i[3] + euclideanCostToGo(i[2], goal)
+            print("Gotcha, ", i, i[0])
+            tempIndex = {j for j in coordDict if coordDict[j] == i[2]}
+            tempIndex = tempIndex.pop()
+            print("Found Index: ", tempIndex)
+            if costDict[tempIndex] > first[3] + stepSize:
+                parentDict[tempIndex] = first[1]
+                c2cDict[tempIndex] = first[3] + stepSize
+                costDict[tempIndex] = first[3] + stepSize + euclideanCostToGo(i[2][0], goal[0])
+
+    # doubleMaze = cv2.flip(doubleMaze,0)
+    # cv2.imshow("DoubleMaze", doubleMaze)
+    # cv2.waitKey(0)
+    #iterate = input("Continue to the next node? \n")
 
 if solved == False:
     print ("Failure! Goal node not found")
 
-print("Saving video... ")
-outVid.release()
-print("Video saved successfully! Displaying video... \n")
+# print("Saving video... ")
+# outVid.release()
+# print("Video saved successfully! Displaying video... \n")
 
-cap = cv2.VideoCapture('output.mp4')
+# cap = cv2.VideoCapture('output.mp4')
 
-if cap.isOpened() == False:
-    print("Error File Not Found")
+# if cap.isOpened() == False:
+#     print("Error File Not Found")
 
-while cap.isOpened():
-    ret,frame= cap.read()
-    if ret == True:
-        cv2.imshow('frame', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    else:
-        break
+# while cap.isOpened():
+#     ret,frame= cap.read()
+#     if ret == True:
+#         cv2.imshow('frame', frame)
+#         if cv2.waitKey(1) & 0xFF == ord('q'):
+#             break
+#     else:
+#         break
 
-cap.release()
-print("Video displayed successfully! Program termination  \n")
-cv2.destroyAllWindows()
+# cap.release()
+# print("Video displayed successfully! Program termination  \n")
+# cv2.destroyAllWindows()
 
 # Resources
 # https://www.programiz.com/dsa/priority-queue
