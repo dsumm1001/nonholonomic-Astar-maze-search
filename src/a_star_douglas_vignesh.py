@@ -1,13 +1,19 @@
-## ========================================
+# ========================================
 # ENPM661 Spring 2023: Robotic Path Planning 
-# Project #2 
-# Maze Search with Obstacles with Dijkstra's Algorithm
+# Project #3 Phase 1
+# Maze Search with Obstacles with A* Algorithm
 #
 # Author: Doug Summerlin (dsumm1001@gmail.com, dsummerl@umd.edu)
 # UID: 114760753
 # Directory ID: dsummerl
+
+# Author: Vignesh Rajagopal(vickyrv570@gmail.com, vigneshr@umd.edu)
+# UID: 119476192
+# Directory ID: vigneshr
 # ========================================
-# Run as 'python3 Dij_maze_search.py'
+# Run as 'python3 a_star_douglas_vignesh.py'
+# Github link: https://github.com/dsumm1001/nonholonomic-Astar-maze-search.git
+# Results link: https://docs.google.com/document/d/1odwbrP457jTVn1dUarhkSgPyvDlK8KBRE_ITPUqQi6A/edit?usp=sharing
 # Press CTRL+C for exit
 
 import numpy as np
@@ -32,16 +38,16 @@ def getValidRobotRadius():
             break
     return robotRadius
 
-def getValidCoords(type, maze, robotRadius):
+def getValidCoords(type, maze, robotRadius, x2Maze):
     while True:
         try:
             coordInput = input("Enter " + type + " node coordinates in x, y format, separated by a comma: ")
             coords = tuple(int(item) for item in coordInput.split(','))
         except ValueError:
-            print("Sorry, results invalid. Please try again, entering two integer inputs between 5-595 and 5-245, respectively. ")
+            print("Sorry, results invalid. Please try again, entering two integer inputs within the maze space. ")
             continue
         if coords[0] < 0 + robotRadius or coords[0] > 600 - robotRadius or coords[1] < 0 + robotRadius or coords[1] > 250 - robotRadius:
-            print("Sorry, results invalid. Please try again, entering two integer inputs between 5-595 and 5-245, respectively. ")
+            print("Sorry, results invalid. Please try again, entering two integer inputs within the maze space. ")
             continue
         if all(maze[(int(coords[1]), int(coords[0]))] == [255,255,255]) == False:
             print("Sorry, results invalid. Please try again, making sure to not place the start or goal in an obstacle space.")
@@ -51,11 +57,18 @@ def getValidCoords(type, maze, robotRadius):
 
     while True:
         try:
-            theta = int(input("Enter " + type + " node orientation as an integer between 0-360: "))
+            theta = int(input("Enter " + type + " node orientation as an integer between 0-360, using increments of 30 deg: "))
             if theta % 30 !=0:
                 raise ValueError
         except ValueError:
-            print(("Sorry, results invalid. Please try again, entering an integer input between 0-360 in increments of 30. "))
+            print(("Sorry, entry invalid. Please try again, entering an integer input between 0-360 in increments of 30. "))
+            continue
+        if not searchNode((coords,theta), x2Maze):
+            if type == "start":
+                print(("Sorry, entry invalid. Please try again, entering an integer input between 0-360 in increments of 30, oriented toward the center of the mazespace. "))
+                continue
+            else:
+                break
         else:
             break
 
@@ -69,13 +82,14 @@ def getValidStepSize():
         except ValueError:
             print("Sorry, results invalid. Please try again, entering the input as an integer between 1-10. ")
             continue
-        if robotRadius <= 0 or robotRadius >= 11:
+        if stepSize <= 0 or stepSize >= 11:
             print("Sorry, results invalid. Please try again, entering the input as an integer between 1-10. ")
             continue
         else:
             break
     return stepSize
 
+#calculate the distance between the current node to goal node
 def euclideanCostToGo(curr, goal):
     eucCost = math.sqrt(math.pow(goal[0] - curr[0], 2) + math.pow(goal[1] - curr[1], 2))
     return eucCost #float
@@ -253,12 +267,10 @@ def generatePath(nodeIndex, nodeCoords, maze):
     return pathIndices, pathCoords
 
 def simulateBot(pathCoords, emptyMaze, robotRadius):
-    # print(pathCoords)
-
     for i in pathCoords:
         tempX = int(2*i[0][0])
         tempY = int(2*i[0][1])
-        cv2.circle(emptyMaze, (tempX, tempY), 5, color=(0,255,255), thickness=-1)
+        cv2.circle(emptyMaze, (tempX, tempY), 3, color=(0,255,255), thickness=-1)
         outVid.write(cv2.flip(emptyMaze,0))
 
     pathCoords.reverse()
@@ -275,11 +287,10 @@ def simulateBot(pathCoords, emptyMaze, robotRadius):
         index -= 1
         outVid.write(cv2.flip(currCirc,0))
 
-print("\nWelcome to the Dijkstra Maze Finder Program! \n")
+print("\nWelcome to the A* Maze Finder Program! \n")
 
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 outVid = cv2.VideoWriter('output.mp4', fourcc, 30, (1200,500))
-#outVid = cv2.VideoWriter('output.avi',cv2.VideoWriter_fourcc(*'MJPG'), 60, (1200,500))
 
 robotRadius = getValidRobotRadius()
 stepSize = getValidStepSize()
@@ -294,8 +305,8 @@ while counter >=0:
     outVid.write(cv2.flip(blankMaze,0))
 
 # get start and goal nodes
-start = getValidCoords("start", maze, robotRadius)
-goal = getValidCoords("goal", maze, robotRadius)
+start = getValidCoords("start", maze, robotRadius, doubleMaze)
+goal = getValidCoords("goal", maze, robotRadius, doubleMaze)
 print()
 print("Pathfinding... \n")
 
@@ -330,10 +341,8 @@ while not openList.empty() and solved == False:
     openSet.remove(first[2])
     closedSet.add(first[2]) 
     closedList.append(first[2])
-
     graph[int(2*first[2][0][0])][int(2*first[2][0][1])][int(first[2][1]/30)] = 1
-
-    print("Current Node: ", first)
+    #print("Current Node: ", first)
 
     if euclideanCostToGo(first[2][0], goal[0]) <= 1.5:
         elapsedTime = time.time() - startTime
@@ -345,6 +354,7 @@ while not openList.empty() and solved == False:
 
         pathIndices, pathCoords = generatePath(first[1], first[2], dispMaze)
         print("Displaying generated path... close window to continue \n")
+
         # # display the path image using opencv
         dispMaze = cv2.flip(dispMaze, 0)
         cv2.imshow('Generated Path', dispMaze)
@@ -356,12 +366,8 @@ while not openList.empty() and solved == False:
         break
 
     results = searchNode(first[2], doubleMaze)
-    # print(results)
  
     for i in results:
-        #print("Searching Node: ", i)
-        # print("Graphspace values", int(2*i[2][0][0]), int(2*i[2][0][1]), int(i[2][1]/30))
-        # print("Checked or not? ", graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)])
         if graph[int(2*i[2][0][0])][int(2*i[2][0][1])][int(i[2][1]/30)] == 0:
             if not i[2] in openSet:
                 index += 1
@@ -395,11 +401,6 @@ while not openList.empty() and solved == False:
                 parentDict[tempIndex] = first[1]
                 c2cDict[tempIndex] = first[3] + stepSize
                 costDict[tempIndex] = first[3] + stepSize + euclideanCostToGo(i[2][0], goal[0])
-
-    # doubleMaze = cv2.flip(doubleMaze,0)
-    # cv2.imshow("DoubleMaze", doubleMaze)
-    # cv2.waitKey(0)
-    #iterate = input("Continue to the next node? \n")
 
 if solved == False:
     print ("Failure! Goal node not found")
