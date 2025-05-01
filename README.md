@@ -1,10 +1,7 @@
 # Project #3 Phase 1: A* Algo Maze Search with Non-Holonomic Constraints
 Author: Doug Summerlin (dsumm1001@gmail.com, dsummerl@umd.edu)  
 UID: 114760753  
-Directory ID: dsummerl  
-Author: Vignesh Rajagopal (vickyrv570@gmail.com, vigneshr@umd.edu)  
-UID: 119476192  
-Directory ID: vigneshr  
+Directory ID: dsummerl
 ENPM661 Spring 2023: Robotic Path Planning
 
 Github Repo Link: https://github.com/dsumm1001/nonholonomic-Astar-maze-search.git  
